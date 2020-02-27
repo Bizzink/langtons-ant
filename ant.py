@@ -4,6 +4,7 @@ class Ant:
         self._row = row
         self._col = col
         self._grid = grid
+        self._steps = 0
 
     def update(self):
         """update tile and move"""
@@ -24,11 +25,8 @@ class Ant:
             self._grid.add_dim(1)
 
         tile = self._grid.get_tile(self._col, self._row, by_ind = True)
-        direction = tile.update()
-        self._update_direction(direction)
+        self._update_direction(tile.update())
         self._move()
-
-        return True
 
     def _move(self):
         """move one space in facing direction"""
@@ -48,6 +46,8 @@ class Ant:
         elif self._direction == 3:
             self._col -= 1
 
+        self._steps += 1
+
     def _update_direction(self, direction):
         """rotate direction to left or right"""
         direction = direction.lower()
@@ -66,3 +66,7 @@ class Ant:
     def get_pos(self):
         """return row, col"""
         return self._row, self._col
+
+    def get_steps(self):
+        """return step count"""
+        return self._steps

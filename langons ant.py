@@ -1,7 +1,39 @@
 import pyglet as pgl
 from pyglet.window import key, mouse
+from menu import Menu
 from grid import Grid
 from ant import Ant
+
+
+# menu functions
+def toggle_pause():
+    global paused
+    if paused:
+        paused = False
+    else:
+        paused = True
+
+
+def reset():
+    global grid, ant
+    grid.delete()
+    del grid
+    del ant
+
+    grid = Grid([5, 5], colour_orders, batch, window, scale=25)
+    ant = Ant(2, 2, grid)
+
+
+def toggle_counter():
+    global counter
+
+    if counter is not None:
+        counter.delete()
+        counter = None
+
+    else:
+        counter = pgl.text.Label(text = "", x = 20, y = 20, font_size=20, font_name="Gotham", color=[255, 255, 255, 100], batch = batch, group=pgl.graphics.OrderedGroup(1))
+
 
 window = pgl.window.Window(1920, 1080)
 batch = pgl.graphics.Batch()
@@ -10,20 +42,32 @@ batch = pgl.graphics.Batch()
 pgl.gl.glEnable(pgl.gl.GL_BLEND)
 pgl.gl.glBlendFunc(pgl.gl.GL_SRC_ALPHA, pgl.gl.GL_ONE_MINUS_SRC_ALPHA)
 
+pgl.resource.path = ["resources"]
+pgl.resource.reindex()
+pgl.resource.add_font("Gotham-Bold.otf")
+
 colour_orders = [{"col": [255, 255, 255], "dir": "left"},
                  {"col": [255, 0, 0], "dir": "right"}]
 
+menu_functions = {"pause": toggle_pause,
+                  "reset": reset,
+                  "toggle_counter": toggle_counter}
+
+menu = Menu(window, batch, menu_functions)
 grid = Grid([5, 5], colour_orders, batch, window, scale=25)
 ant = Ant(2, 2, grid)
 
 prev_highlight = None
+paused = False
 dragged = False
+counter = None
+drag_x = drag_y = 0
 
 
 @window.event
 def on_key_press(symbol, mod):
-    if symbol == key.F3:
-        pass
+    if symbol == key.SPACE:
+        menu.toggle_main()
 
 
 @window.event
@@ -39,24 +83,27 @@ def on_mouse_motion(x, y, dx, dy):
     if tile is not None:
         tile.highlight()
 
+    menu.mouse_over(x ,y)
+
 
 @window.event
 def on_mouse_drag(x, y, dx, dy, buttons, mods):
-    global dragged
-    grid.move(dx, dy)
-    dragged = True
+    global dragged, drag_x, drag_y
+
+    if buttons == mouse.LEFT:
+        drag_x += dx
+        drag_y += dy
+        dragged = True
 
 
 @window.event
 def on_mouse_release(x, y, button, mods):
-    pass
-
     global dragged
 
     if button == mouse.LEFT:
         if not dragged:
-            row, col = grid.get_tile(x, y, get_ind=True)
-            ants.append(Ant(row, col, grid))
+            if not menu.click(x, y):
+                menu.hide_main()
 
         dragged = False
 
@@ -73,7 +120,16 @@ def on_draw():
 
 
 def update(dt):
-    ant.update()
+    global drag_x, drag_y, paused, counter
+
+    if not paused:
+        ant.update()
+
+    if counter is not None:
+        counter.text = f"Step: {ant.get_steps()}"
+
+    grid.move(drag_x, drag_y)
+    drag_x = drag_y = 0
 
 
 if __name__ == '__main__':
