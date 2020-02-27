@@ -122,7 +122,6 @@ class Tile:
     def show(self, force = False):
         """add tile graphic"""
         if self._culled and self._activated or force:
-            x, y, scale = self._x, self._y, self._scale
 
             self._tile = self._batch.add(4, pgl.gl.GL_QUADS, self._group, ("v2f", (0, 0, 0, 0, 0, 0, 0, 0)),
                                          ("c3B", ([128] * 12)))

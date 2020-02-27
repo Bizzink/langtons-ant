@@ -113,7 +113,7 @@ class Button:
             image_bounds.extend([self._y, self._y + image.height * self._scale])
         elif anchor_x == "top":
             image.anchor_y = image.height
-            image_bounds.extend([y - image.width * self._scale, self._y])
+            image_bounds.extend([self._y - image.width * self._scale, self._y])
         else:
             raise ValueError(f"Invalid anchor y: \"{anchor_y}\"")
 
@@ -247,14 +247,14 @@ class Menu:
 
             self._main_primitives.append(self._batch.add(4, pgl.gl.GL_QUADS, divider_group,
                                                          ("v2i", (
-                                                         x + 5, int(w * 2.3), x + 5, int(w * 2.3) + 2, x + w - 5,
-                                                         int(w * 2.3) + 2, x + w - 5, int(w * 2.3))),
+                                                             x + 5, int(w * 2.3), x + 5, int(w * 2.3) + 2, x + w - 5,
+                                                             int(w * 2.3) + 2, x + w - 5, int(w * 2.3))),
                                                          ("c4B", ([76, 76, 76, self._main_opacity] * 4))))
 
             self._main_primitives.append(self._batch.add(4, pgl.gl.GL_QUADS, divider_group,
                                                          ("v2i", (
-                                                         x + (w // 2) - 2, w * 4, x + (w // 2) - 2, h - (w * 4),
-                                                         x + (w // 2) + 2, h - (w * 4), x + (w // 2) + 2, w * 4)),
+                                                             x + (w // 2) - 2, w * 4, x + (w // 2) - 2, h - (w * 4),
+                                                             x + (w // 2) + 2, h - (w * 4), x + (w // 2) + 2, w * 4)),
                                                          ("c4B", ([76, 76, 76, self._main_opacity] * 4))))
 
             for button in self._main_buttons:
