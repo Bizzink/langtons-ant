@@ -3,7 +3,7 @@ from pyglet.window import key, mouse
 from grid import Grid
 from ant import Ant
 
-window = pgl.window.Window(1280, 720)
+window = pgl.window.Window(1920, 1080)
 batch = pgl.graphics.Batch()
 
 # for transparent primitives
@@ -13,8 +13,8 @@ pgl.gl.glBlendFunc(pgl.gl.GL_SRC_ALPHA, pgl.gl.GL_ONE_MINUS_SRC_ALPHA)
 colour_orders = [{"col": [255, 255, 255], "dir": "left"},
                  {"col": [255, 0, 0], "dir": "right"}]
 
-grid = Grid([0, 0], [200, 200], colour_orders, batch, window, scale=25, group=pgl.graphics.OrderedGroup(1))
-ants = []
+grid = Grid([5, 5], colour_orders, batch, window, scale=25)
+ant = Ant(2, 2, grid)
 
 prev_highlight = None
 dragged = False
@@ -49,6 +49,8 @@ def on_mouse_drag(x, y, dx, dy, buttons, mods):
 
 @window.event
 def on_mouse_release(x, y, button, mods):
+    pass
+
     global dragged
 
     if button == mouse.LEFT:
@@ -69,10 +71,11 @@ def on_draw():
     window.clear()
     batch.draw()
 
-    for ant in ants:
-        if not ant.update():
-            del ant
+
+def update(dt):
+    ant.update()
 
 
 if __name__ == '__main__':
+    pgl.clock.schedule_interval(update, 1 / 120)
     pgl.app.run()

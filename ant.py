@@ -7,14 +7,24 @@ class Ant:
 
     def update(self):
         """update tile and move"""
-        try:
-            tile = self._grid.get_tile(self._col, self._row, by_ind = True)
-            direction = tile.update()
-        except IndexError:
-            return False
-        except AttributeError:
-            return False
+        grid_size = self._grid.get_size()
 
+        if self._row <= 0:
+            self._grid.add_dim(2)
+            self._row += 1
+
+        elif self._row >= grid_size[1]:
+            self._grid.add_dim(0)
+
+        if self._col <= 0:
+            self._grid.add_dim(3)
+            self._col += 1
+
+        elif self._col >= grid_size[0]:
+            self._grid.add_dim(1)
+
+        tile = self._grid.get_tile(self._col, self._row, by_ind = True)
+        direction = tile.update()
         self._update_direction(direction)
         self._move()
 
