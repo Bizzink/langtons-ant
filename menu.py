@@ -1,14 +1,17 @@
 import pyglet as pgl
 import menu_button
 import menu_rule
+import menu_slider
 from menu_button import Button
 from menu_rule import Rule
+from menu_slider import Slider
 
 
 class Menu:
     def __init__(self, window, batch, functions, rule_list):
         button_scale = 0.24
         menu_button.init(batch, window)
+        menu_slider.init(batch, window)
         menu_rule.init(batch, rule_list, button_scale, pgl.graphics.OrderedGroup(2), window)
 
         self._height = window.height
@@ -38,6 +41,8 @@ class Menu:
         self._main_buttons.append(Button(x, (w * 0.7), "settings.png", button_scale,
                                          [self._toggle_rule, functions["pause"]]))
 
+        self._speed_slider = Slider(x, self._height * 0.48, self._height - (w * 8), button_scale, 1, 10, 7, "vertical", pgl.graphics.OrderedGroup(2))
+
         # rule menu setup
 
         self._rule_x = int(window.width * 0.845)
@@ -50,7 +55,7 @@ class Menu:
 
         x = self._rule_x + (self._rule_width / 2)
         w = self._rule_width
-        h =self._height
+        h = self._height
 
         self._rule_buttons.append(Button(x, h * 0.05, "reset.png", button_scale, None))
 
@@ -62,13 +67,13 @@ class Menu:
         # click main buttons
         if self._main_x < x < self._main_x + self._main_width:
             for button in self._main_buttons:
-                button.click(x, y)
+                button.click()
             return True
 
         # click rule buttons
         elif self._rule_x < x < self._rule_x + self._rule_width:
             for button in self._rule_buttons:
-                button.click(x, y)
+                button.click()
             for rule in self._rules:
                 rule.click(x, y)
             return True
@@ -78,23 +83,35 @@ class Menu:
     def mouse_over(self, x, y):
         """pass mouse over event to buttons in moused over section"""
         # check moue over for main buttons
-        if self._main_x < x < self._main_x + self._main_width:
+        if self._main and self._main_x < x < self._main_x + self._main_width:
+            self._speed_slider.mouse_over(x, y)
+
             for button in self._main_buttons:
                 button.mouse_over(x, y)
                 self._was_moused_over = True
 
+            return True
+
         # check mouse over for rule buttons
-        elif self._rule_x < x < self._rule_x + self._rule_width:
+        elif self._rule and self._rule_x < x < self._rule_x + self._rule_width:
             for button in self._rule_buttons:
                 button.mouse_over(x, y)
             for rule in self._rules:
                 rule.mouse_over(x, y)
+
+            return True
 
         # update on mouse leave to reset cursor
         elif self._was_moused_over:
             for button in self._main_buttons:
                 button.mouse_over(x, y)
                 self._was_moused_over = False
+
+        return False
+
+    def drag(self, dx, dy):
+        if self._main:
+            self._speed_slider.drag(dx, dy)
 
     def toggle_main(self):
         """toggle main menu"""
@@ -103,21 +120,27 @@ class Menu:
         else:
             self._show_main()
 
-    def _update_main_opacity(self, do):
-        """increase /  decrease main opacity"""
+    def _update_main_opacity(self, opacity, absolute = False):
+        """set main opacity"""
+        if absolute:
+            self._main_opacity = opacity
+        else:
+            self._main_opacity += opacity
+
+        if self._main_opacity > 255:
+            self._main_opacity = 255
+
+        elif self._main_opacity < 0:
+            self._main_opacity = 0
+
         if self._main:
-            self._main_opacity += do
-
-            if self._main_opacity > 255:
-                self._main_opacity = 255
-
-            elif self._main_opacity < 0:
-                self._main_opacity = 0
-
             for primitive in self._main_primitives:
                 colour = primitive.colors[:3].copy()
                 colour.append(self._main_opacity)
                 primitive.colors = colour * 4
+
+        for button in self._main_buttons:
+            button.update_opacity(self._main_opacity)
 
     def _show_main(self):
         """display main menu"""
@@ -160,6 +183,8 @@ class Menu:
             for button in self._main_buttons:
                 button.show()
 
+            self._speed_slider.show()
+
     def hide_main(self):
         """hide main menu"""
         if self._rule:
@@ -176,6 +201,8 @@ class Menu:
 
             cursor = self._window.get_system_mouse_cursor(self._window.CURSOR_DEFAULT)
             self._window.set_mouse_cursor(cursor)
+
+            self._speed_slider.hide()
 
             self._main = False
 
@@ -219,6 +246,9 @@ class Menu:
                 rule.hide()
 
             self._rule = False
+
+    def update_rule_opacity(self, opacity, absolute = False):
+        """set rule opacity"""
 
     def add_rule_group(self):
         pass

@@ -62,6 +62,7 @@ prev_highlight = None
 paused = False
 dragged = False
 counter = None
+mouse_menu = False
 drag_x = drag_y = 0
 
 
@@ -73,7 +74,7 @@ def on_key_press(symbol, mod):
 
 @window.event
 def on_mouse_motion(x, y, dx, dy):
-    global prev_highlight
+    global prev_highlight, mouse_menu
 
     if prev_highlight is not None:
         prev_highlight.highlight(reset=True)
@@ -84,17 +85,20 @@ def on_mouse_motion(x, y, dx, dy):
     if tile is not None:
         tile.highlight()
 
-    menu.mouse_over(x, y)
+    mouse_menu = menu.mouse_over(x, y)
 
 
 @window.event
-def on_mouse_drag(x, y, dx, dy, buttons, mods):
-    global dragged, drag_x, drag_y
+def on_mouse_drag(x, y, dx, dy, button, mods):
+    global dragged, drag_x, drag_y, mouse_menu
 
-    if buttons == mouse.LEFT:
-        drag_x += dx
-        drag_y += dy
-        dragged = True
+    if button == mouse.LEFT:
+        if mouse_menu:
+            menu.drag(dx, dy)
+        else:
+            drag_x += dx
+            drag_y += dy
+            dragged = True
 
 
 @window.event

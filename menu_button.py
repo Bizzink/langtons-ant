@@ -18,19 +18,6 @@ def init(batch, window):
 class Button:
     def __init__(self, x, y, image_name, scale, command, anchor_x="center", anchor_y="center",
                  group=pgl.graphics.OrderedGroup(2), hidden=True):
-        if type(image_name) == list:
-            if len(image_name) == 2:
-                self._images = [image_name, 0]
-                self._curr_image = 0
-                image_name = image_name[0]
-            elif len(image_name) == 1:
-                image_name = image_name[0]
-            else:
-                raise ValueError(f"Invalid amount of images! ({len(image_name)})")
-        else:
-            self._curr_image = None
-            self._images = None
-
         self._x = x
         self._y = y
         self._anchor_x = anchor_x
@@ -39,50 +26,54 @@ class Button:
         self._command = command
         self._hidden = hidden
         self._scale = scale
-        self._tint = None
-        self._flipped = False
-        self._sprite = None
+
         self._group = group
-        self._was_moused_over = False
+        self._moused_over = False
 
-        self._image, self._image_bounds = self._image_init(image_name)
+        self._image = image_name
+        self._curr_image = 0
 
-        if not hidden:
-            self._hidden = True
-            self.show()
+        if type(image_name) != list:
+            image_name = [image_name]
 
-    def click(self, x, y):
+        image, self._image_bounds = self._image_init(image_name[0])
+        self._sprite = pgl.sprite.Sprite(image, x = x, y = y, batch = g.batch, group = group)
+        self._sprite.scale = scale
+
+        if hidden:
+            self._sprite.visible = False
+
+    def __str__(self):
+        return self._image
+
+    def click(self):
         """run command if clicked"""
-        if self._command is not None and not self._hidden:
-            min_x, max_x, min_y, max_y = self._image_bounds
+        if self._command is not None and not self._hidden and self._moused_over:
+            if type(self._command) == list:
+                for command in self._command:
+                    command()
+            else:
+                self._command()
 
-            if min_x < x < max_x and min_y < y < max_y:
-                if type(self._command) == list:
-                    for command in self._command:
-                        command()
-
-                else:
-                    self._command()
-
-                if self._images is not None:
-                    self._image, self._image_bounds = self._image_init(self._images[0][1 - self._curr_image])
-                    self._sprite.image = self._image
-                    self._curr_image = 1 - self._curr_image
+            if type(self._image) == list:
+                image, self._image_bounds = self._image_init(self._image[1 - self._curr_image])
+                self._sprite.image = image
+                self._curr_image = 1 - self._curr_image
 
     def mouse_over(self, x, y):
         """set mouse cursor to hand when mouse over icon"""
         if self._command is not None and not self._hidden:
             min_x, max_x, min_y, max_y = self._image_bounds
 
-            if min_x < x < max_x and min_y < y < max_y and not self._was_moused_over:
+            if min_x < x < max_x and min_y < y < max_y and not self._moused_over:
                 cursor = g.window.get_system_mouse_cursor(g.window.CURSOR_HAND)
                 g.window.set_mouse_cursor(cursor)
-                self._was_moused_over = True
+                self._moused_over = True
 
-            elif (not min_x < x < max_x or not min_y < y < max_y) and self._was_moused_over:
+            elif (not min_x < x < max_x or not min_y < y < max_y) and self._moused_over:
                 cursor = g.window.get_system_mouse_cursor(g.window.CURSOR_DEFAULT)
                 g.window.set_mouse_cursor(cursor)
-                self._was_moused_over = False
+                self._moused_over = False
 
     def update_opacity(self, opacity, absolute=False):
         """update opacity of image"""
@@ -91,49 +82,39 @@ class Button:
         else:
             self._sprite.opacity += opacity
 
-    def hide(self):
-        """remove image, disable click"""
+        if self._opacity > 255:
+            self._opacity = 255
+
+        elif self._opacity < 0:
+            self._opacity = 0
+
         if not self._hidden:
-            self._sprite.delete()
-            self._sprite = None
-            self._hidden = True
+            self._sprite.opacity = opacity
+
+    def hide(self):
+        """hide sprite, disable click"""
+        self._sprite.visible = False
+        self._hidden = True
 
     def show(self):
-        """re-enable image and click"""
-        if self._hidden:
-            self._sprite = pgl.sprite.Sprite(self._image, x=self._x, y=self._y, batch=g.batch, group=self._group)
-            self._sprite.scale = self._scale
-            self._sprite.opacity = self._opacity
-            self._hidden = False
-
-            if self._tint is not None:
-                self._sprite.color = self._tint
-
-            if self._flipped:
-                self._sprite.scale_x = -1
-            else:
-                self._sprite.scale_x = 1
+        """show sprite, enable click"""
+        self._sprite.visible = True
+        self._hidden = False
 
     def tint(self, colour, reset = False):
-        """tint image"""
+        """tint sprite"""
         if reset:
-            self._tint = None
+            self._sprite.color = (255, 255, 255)
 
         else:
-            self._tint = colour
-
-        if self._sprite is not None:
-            self._sprite.color = self._tint
+            self._sprite.color = colour
 
     def flip(self, flipped):
         """flip sprite horizontally"""
-        self._flipped = flipped
-
-        if not self._hidden:
-            if flipped:
-                self._sprite.scale_x = -1
-            else:
-                self._sprite.scale_x = 1
+        if flipped:
+            self._sprite.scale_x = -1
+        else:
+            self._sprite.scale_x = 1
 
     def _image_init(self, image_name):
         image = pgl.resource.image(image_name)

@@ -26,7 +26,5 @@ class ColourPick:
     def mouse_drag(self, x, y, dx, dy):
         pass
 
-
-
     def delete(self):
         pass

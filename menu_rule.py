@@ -95,12 +95,34 @@ class Rule:
     def click(self, x, y):
         """pass click event to buttons"""
         for button in self._buttons:
-            button.click(x, y)
+            button.click()
 
     def mouse_over(self, x, y):
         """pass mouse over event to buttons"""
         for button in self._buttons:
             button.mouse_over(x, y)
+
+    def update_opacity(self, opacity, absolute=False):
+        """set opacity of primitives, buttons"""
+        if absolute:
+            self._opacity = opacity
+        else:
+            self._opacity += opacity
+
+        if self._opacity > 255:
+            self._opacity = 255
+
+        elif self._opacity < 0:
+            self._opacity = 0
+
+        for primitive in self._primitives:
+            colour = primitive.colors[:3].copy()
+            colour.append(self._opacity)
+            primitive.colors = colour * 4
+
+        if not self._hidden:
+            for button in self._buttons:
+                button.update_opacity(opacity, absolute = absolute)
 
     def _switch_direction(self):
         """switch turn direction in rule, button"""
@@ -112,10 +134,8 @@ class Rule:
             self._buttons[1].flip(False)
 
     def _update_colour(self, colour):
-        pass
+        """set rule colour"""
+        self._rule["colour"] = colour
 
     def delete(self):
-        pass
-
-    def update_opacity(self, opacity, absolute=False):
         pass
