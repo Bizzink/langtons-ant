@@ -20,7 +20,7 @@ def reset():
     del grid
     del ant
 
-    grid = Grid([5, 5], colour_orders, batch, window, scale=25)
+    grid = Grid([5, 5], rules, batch, window, scale=25)
     ant = Ant(2, 2, grid)
 
 
@@ -32,7 +32,8 @@ def toggle_counter():
         counter = None
 
     else:
-        counter = pgl.text.Label(text = "", x = 20, y = 20, font_size=20, font_name="Gotham", color=[255, 255, 255, 100], batch = batch, group=pgl.graphics.OrderedGroup(1))
+        counter = pgl.text.Label(text="", x=20, y=20, font_size=20, font_name="Gotham", color=[255, 255, 255, 100],
+                                 batch=batch, group=pgl.graphics.OrderedGroup(1))
 
 
 window = pgl.window.Window(1920, 1080)
@@ -46,15 +47,15 @@ pgl.resource.path = ["resources"]
 pgl.resource.reindex()
 pgl.resource.add_font("Gotham-Bold.otf")
 
-colour_orders = [{"col": [255, 255, 255], "dir": "left"},
-                 {"col": [255, 0, 0], "dir": "right"}]
+rules = [{"colour": [255, 255, 255], "direction": "left"},
+         {"colour": [255, 0, 0], "direction": "left"}]
 
 menu_functions = {"pause": toggle_pause,
                   "reset": reset,
                   "toggle_counter": toggle_counter}
 
-menu = Menu(window, batch, menu_functions)
-grid = Grid([5, 5], colour_orders, batch, window, scale=25)
+menu = Menu(window, batch, menu_functions, rules)
+grid = Grid([5, 5], rules, batch, window, scale=25)
 ant = Ant(2, 2, grid)
 
 prev_highlight = None
@@ -83,7 +84,7 @@ def on_mouse_motion(x, y, dx, dy):
     if tile is not None:
         tile.highlight()
 
-    menu.mouse_over(x ,y)
+    menu.mouse_over(x, y)
 
 
 @window.event
