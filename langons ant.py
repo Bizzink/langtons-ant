@@ -1,6 +1,6 @@
 import pyglet as pgl
 from pyglet.window import key, mouse
-from menu import Menu
+import menu
 from grid import Grid
 from ant import Ant
 
@@ -47,19 +47,18 @@ pgl.resource.path = ["resources"]
 pgl.resource.reindex()
 pgl.resource.add_font("Gotham-Bold.otf")
 
-rules = [{"colour": [255, 255, 255], "direction": "left"},
-         {"colour": [255, 0, 0], "direction": "left"}]
+rules = []
 
 menu_functions = {"pause": toggle_pause,
                   "reset": reset,
                   "toggle_counter": toggle_counter}
 
-menu = Menu(window, batch, menu_functions, rules)
+menu = menu.init(window, batch, menu_functions, rules)
 grid = Grid([5, 5], rules, batch, window, scale=25)
 ant = Ant(2, 2, grid)
 
 prev_highlight = None
-paused = False
+paused = True
 dragged = False
 counter = None
 mouse_menu = False
@@ -69,7 +68,7 @@ drag_x = drag_y = 0
 @window.event
 def on_key_press(symbol, mod):
     if symbol == key.SPACE:
-        menu.toggle_main()
+        menu.toggle()
 
 
 @window.event
@@ -94,7 +93,8 @@ def on_mouse_drag(x, y, dx, dy, button, mods):
 
     if button == mouse.LEFT:
         if mouse_menu:
-            menu.drag(dx, dy)
+            # menu.drag(dx, dy)
+            pass
         else:
             drag_x += dx
             drag_y += dy
@@ -107,8 +107,7 @@ def on_mouse_release(x, y, button, mods):
 
     if button == mouse.LEFT:
         if not dragged:
-            if not menu.click(x, y):
-                menu.hide_main()
+            menu.click()
 
         dragged = False
 

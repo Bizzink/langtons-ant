@@ -1,260 +1,203 @@
 import pyglet as pgl
 import menu_button
-import menu_rule
-import menu_slider
 from menu_button import Button
-from menu_rule import Rule
-from menu_slider import Slider
+from random import randint
+from colorsys import hsv_to_rgb
+
+
+g = None
+main_menu = None
+rule_menu = None
+
+
+class Globals:
+    def __init__(self, window, batch, functions, rule_list):
+        self.window = window
+        self.batch = batch
+        self.functions = functions
+        self.rule_list = rule_list
+        self.scale = window.width * 0.00013
+
+
+def init(window, batch, functions, rule_list):
+    global g, main_menu, rule_menu
+    g = Globals(window, batch, functions, rule_list)
+    menu_button.init(batch, window)
+    group = pgl.graphics.OrderedGroup(1)
+    main = Menu(int(window.width * 0.96), 0, int(window.width * 0.04), window.height, group)
+    rule = Menu(int(window.width * 0.845), 0, int(window.width * 0.112), window.height, group)
+
+    # main setup
+    x = main.x + main.w // 2
+    w = main.w
+    h = window.height
+
+    main.add_button(Button(["play.png", "pause.png"], [functions["pause"]], g.scale, x=x, y=h * 0.96))
+    main.add_button(Button(["restart.png"], [functions["reset"]], g.scale, x=x, y=h * 0.885))
+    main.add_button(Button(["fast.png"], [], g.scale, clickable=False, x=x, y=h * 0.78))
+    main.add_button(Button(["slow.png"], [], g.scale, clickable=False, x=x, y=h * 0.23))
+    main.add_button(Button(["counter_on.png", "counter_off.png"], [functions["toggle_counter"]], g.scale, x=x, y=h * 0.12))
+    main.add_button(Button(["settings.png"], [rule.toggle, functions["pause"]], g.scale, x=x, y=h * 0.05))
+
+    main.add_primitive([5, h - w * 2.3, 5, h - w * 2.3 + 2, w - 5, h - w * 2.3 + 2, w - 5, h - w * 2.3], [76, 76, 76])
+    main.add_primitive([5, w * 2.3,  5, w * 2.3 + 2, w - 5, w * 2.3 + 2, w - 5, w * 2.3], [76, 76, 76])
+    main.add_primitive([w / 2 - 2, w * 4, w / 2 - 2, h - w * 4, w / 2 + 2, h - w * 4, w / 2 + 2, w * 4], [76, 76, 76])
+
+    # rule setup
+    x = rule.x + rule.w / 2
+
+    rule.add_button(Button(["reset.png"], [], g.scale, x=x, y=h * 0.05))
+    rule.add_button(Button(["add.png"], [], g.scale, x=x, y=h * 0.05))
+    rule.add_rule(permanent=True, colour = [255, 255, 255], arrow = False)
+    rule.add_rule(permanent=True, flipped=True, colour = [255, 0, 0])
+    rule.add_rule(permanent=True, flipped=True)
+
+    main_menu = main
+    rule_menu = rule
+
+    return main
 
 
 class Menu:
-    def __init__(self, window, batch, functions, rule_list):
-        button_scale = 0.24
-        menu_button.init(batch, window)
-        menu_slider.init(batch, window)
-        menu_rule.init(batch, rule_list, button_scale, pgl.graphics.OrderedGroup(2), window)
+    def __init__(self, x, y, w, h, group, bg = 51):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
 
-        self._height = window.height
-        self._was_moused_over = False
-        self._batch = batch
-        self._window = window
-
-        # main menu setup
-        self._main_x = int(window.width * 0.96)
-        self._main_width = int(window.width * 0.04)
-        self._main_opacity = 255
-        self._main_primitives = None
-        self._main_buttons = []
-        self._main = False
-
-        x = self._main_x + (self._main_width / 2)
-        w = self._main_width
-
-        self._main_buttons.append(
-            Button(x, self._height - (w * 0.6), ["pause.png", "play.png"], button_scale, functions["pause"]))
-        self._main_buttons.append(
-            Button(x, self._height - (w * 1.6), "restart.png", button_scale, functions["reset"]))
-        self._main_buttons.append(Button(x, self._height - (w * 3), "fast.png", button_scale, None))
-        self._main_buttons.append(Button(x, w * 3, "slow.png", button_scale, None))
-        self._main_buttons.append(
-            Button(x, w * 1.7, ["counter_on.png", "counter_off.png"], button_scale, functions["toggle_counter"]))
-        self._main_buttons.append(Button(x, (w * 0.7), "settings.png", button_scale,
-                                         [self._toggle_rule, functions["pause"]]))
-
-        self._speed_slider = Slider(x, self._height * 0.48, self._height - (w * 8), button_scale, 1, 10, 7, "vertical", pgl.graphics.OrderedGroup(2))
-
-        # rule menu setup
-
-        self._rule_x = int(window.width * 0.845)
-        self._rule_width = int(window.width * 0.112)
-        self._rule_opacity = 255
-        self._rule_primitives = None
-        self._rule_buttons = []
+        self._visible = 0
+        self._opacity = 255
+        self._group = group
+        self._buttons = []
+        self._sliders = []
+        self._primitives = []
         self._rules = []
-        self._rule = False
+        self._index = 0
+        self.add_primitive([0, 0, 0, h, w, h, w, 0], [bg, bg, bg])
 
-        x = self._rule_x + (self._rule_width / 2)
-        w = self._rule_width
-        h = self._height
-
-        self._rule_buttons.append(Button(x, h * 0.05, "reset.png", button_scale, None))
-
-        self._rules.append(Rule(x, h * 0.925, w, 0, permanent=True))
-        self._rules.append(Rule(x, h * 0.85, w, 1, permanent=True, flipped=True))
-
-    def click(self, x, y):
-        """pass click event to buttons in moused over section"""
-        # click main buttons
-        if self._main_x < x < self._main_x + self._main_width:
-            for button in self._main_buttons:
-                button.click()
-            return True
-
-        # click rule buttons
-        elif self._rule_x < x < self._rule_x + self._rule_width:
-            for button in self._rule_buttons:
-                button.click()
-            for rule in self._rules:
-                rule.click(x, y)
-            return True
-
-        return False
+    def click(self):
+        """pass click event to all buttons"""
+        for button in self._buttons:
+            button.click()
 
     def mouse_over(self, x, y):
-        """pass mouse over event to buttons in moused over section"""
-        # check moue over for main buttons
-        if self._main and self._main_x < x < self._main_x + self._main_width:
-            self._speed_slider.mouse_over(x, y)
+        """pass mouse over event to all buttons if mouse is in menu region"""
+        if self._visible:
+            min_x = self.x
+            max_x = self.x + self.w
+            min_y = self.y
+            max_y = self.y + self.h
 
-            for button in self._main_buttons:
-                button.mouse_over(x, y)
-                self._was_moused_over = True
+            if min_x < x < max_x and min_y < y < max_y:
+                for button in self._buttons:
+                    button.mouse_over(x, y)
 
-            return True
+                return True
 
-        # check mouse over for rule buttons
-        elif self._rule and self._rule_x < x < self._rule_x + self._rule_width:
-            for button in self._rule_buttons:
-                button.mouse_over(x, y)
-            for rule in self._rules:
-                rule.mouse_over(x, y)
+    def mouse_drag(self, dx, dy):
+        """pass drag event to all sliders"""
+        for slider in self._sliders:
+            slider.drag(dx, dy)
 
-            return True
-
-        # update on mouse leave to reset cursor
-        elif self._was_moused_over:
-            for button in self._main_buttons:
-                button.mouse_over(x, y)
-                self._was_moused_over = False
-
-        return False
-
-    def drag(self, dx, dy):
-        if self._main:
-            self._speed_slider.drag(dx, dy)
-
-    def toggle_main(self):
-        """toggle main menu"""
-        if self._main:
-            self.hide_main()
+    def toggle(self):
+        """toggle show / hide"""
+        if self._visible:
+            self.hide()
         else:
-            self._show_main()
+            self.show()
 
-    def _update_main_opacity(self, opacity, absolute = False):
-        """set main opacity"""
-        if absolute:
-            self._main_opacity = opacity
+    def show(self):
+        """show all elements"""
+        for button in self._buttons: button.visible = True
+        for rule in self._rules: rule.show()
+        self._visible = 1
+        self.update_opacity()
+
+    def hide(self):
+        """hide all elements"""
+        for button in self._buttons: button.visible = False
+        for rule in self._rules: rule.hide()
+        self._visible = 0
+        self.update_opacity()
+
+    def add_button(self, button):
+        """add button to buttons"""
+        self._buttons.append(button)
+
+    def add_primitive(self, points: list, colour: list):
+        """add primitive to primitives, co-ordinates relative to self x, y"""
+        colour = colour.copy()
+        colour.append(self._opacity * self._visible)
+
+        for i in range(0, len(points), 2):
+            points[i] = int(points[i] + self.x)
+            points[i + 1] = int(points[i + 1] + self.y)
+
+        self._primitives.append(g.batch.add(4, pgl.gl.GL_QUADS, self._group, ("v2i", points), ("c4B", (colour * 4))))
+
+    def add_rule(self, permanent = False, flipped = False, colour = None, arrow = True):
+        """add new rule at next index"""
+        y = self.h * (1 - self._index * 0.075) - self.h * 0.06
+        self._rules.append(Rule(self.x + self.w / 2, y, self.w * 0.9, pgl.graphics.OrderedGroup(self._group.order + 1),
+                                self._index, flipped = flipped, permanent = permanent, colour = colour, arrow = arrow))
+        self._index += 1
+
+    def update_opacity(self, opacity = None, absolute = False):
+        """update primitives opacity"""
+        if opacity is not None:
+            if absolute:
+                self._opacity = opacity
+            else:
+                self._opacity += opacity
+
+            for button in self._buttons:
+                button.opacity = self._opacity
+
+        for primitive in self._primitives:
+            colour = primitive.colors[:3]
+            colour.append(self._opacity * self._visible)
+            primitive.colors = colour * 4
+
+
+class Rule(Menu):
+    def __init__(self, x, y, w, group, index, flipped = False, permanent = False, colour = None, arrow = True):
+        super().__init__(int(x - w / 2), int(y), int(w), int(w // 3.5), group, bg = 37)
+
+        if colour is None:
+            hue = randint(0, 256) / 256
+            colour = [int(val * 255) for val in hsv_to_rgb(hue, 0.8, 0.9)]
+
+        g.rule_list.append({"colour": colour, "direction": "left"})
+
+        self.index = index
+        self._rule = g.rule_list[self.index]
+
+        group = pgl.graphics.OrderedGroup(group.order + 1)
+
+        self.add_primitive([w * 0.61, self.h * 0.1, w * 0.61, self.h * 0.9, w * 0.61 + 3, self.h * 0.9, w * 0.61 + 3, self.h * 0.1], [64, 64, 64])
+
+        y = self.y + self.h / 2
+
+        self.add_button(Button(["colour.png"], [], g.scale * 0.7, x=x - w * 0.35, y=y, group=group))
+        self._buttons[0].color = self._rule["colour"]
+        self.add_button(Button(["arrow.png"], [self.switch_direction], g.scale * 0.7, x=x - w * 0.07, y=y, group=group))
+        self.add_button(Button(["remove.png"], [], g.scale * 0.7, x=x + w * 0.3, y=y, group=group))
+
+        if permanent:
+            self._buttons[2].clickable = False
+            self._buttons[2].color = [128, 128, 128]
+
+        if flipped:
+            self.switch_direction()
+
+        if arrow:
+            self.add_button(Button(["next.png"], [], g.scale, x=x, y=y + self.h * 0.75, group=group))
+
+    def switch_direction(self):
+        """switch turn direction in rule, button"""
+        if self._rule["direction"] == "left":
+            self._rule["direction"] = "right"
+            self._buttons[1].scale_x = -1
         else:
-            self._main_opacity += opacity
-
-        if self._main_opacity > 255:
-            self._main_opacity = 255
-
-        elif self._main_opacity < 0:
-            self._main_opacity = 0
-
-        if self._main:
-            for primitive in self._main_primitives:
-                colour = primitive.colors[:3].copy()
-                colour.append(self._main_opacity)
-                primitive.colors = colour * 4
-
-        for button in self._main_buttons:
-            button.update_opacity(self._main_opacity)
-
-    def _show_main(self):
-        """display main menu"""
-        if not self._main:
-            self._main = True
-            bg_group = pgl.graphics.OrderedGroup(1)
-            divider_group = pgl.graphics.OrderedGroup(2)
-
-            x, w, h = self._main_x, self._main_width, self._height
-
-            self._main_primitives = []
-
-            self._main_primitives.append(self._batch.add(4, pgl.gl.GL_QUADS, bg_group,
-                                                         ("v2i", (x, 0, x, h, x + w, h, x + w, 0)),
-                                                         ("c4B", ([51, 51, 51, self._main_opacity] * 4))))
-
-            self._main_primitives.append(self._batch.add(4, pgl.gl.GL_QUADS, divider_group,
-                                                         ("v2i", (x + 5, h - int(w * 2.3),
-                                                                  x + 5, h - int(w * 2.3) + 2,
-                                                                  x + w - 5, h - int(w * 2.3) + 2,
-                                                                  x + w - 5, h - int(w * 2.3))),
-                                                         ("c4B", ([76, 76, 76, self._main_opacity] * 4))))
-
-            self._main_primitives.append(self._batch.add(4, pgl.gl.GL_QUADS, divider_group,
-                                                         ("v2i", (
-                                                             x + 5, int(w * 2.3),
-                                                             x + 5, int(w * 2.3) + 2,
-                                                             x + w - 5, int(w * 2.3) + 2,
-                                                             x + w - 5, int(w * 2.3))),
-                                                         ("c4B", ([76, 76, 76, self._main_opacity] * 4))))
-
-            self._main_primitives.append(self._batch.add(4, pgl.gl.GL_QUADS, divider_group,
-                                                         ("v2i", (
-                                                             x + (w // 2) - 2, w * 4,
-                                                             x + (w // 2) - 2, h - (w * 4),
-                                                             x + (w // 2) + 2, h - (w * 4),
-                                                             x + (w // 2) + 2, w * 4)),
-                                                         ("c4B", ([76, 76, 76, self._main_opacity] * 4))))
-
-            for button in self._main_buttons:
-                button.show()
-
-            self._speed_slider.show()
-
-    def hide_main(self):
-        """hide main menu"""
-        if self._rule:
-            self._hide_rule()
-
-        if self._main:
-            for item in self._main_primitives:
-                item.delete()
-
-            self._main_primitives = None
-
-            for button in self._main_buttons:
-                button.hide()
-
-            cursor = self._window.get_system_mouse_cursor(self._window.CURSOR_DEFAULT)
-            self._window.set_mouse_cursor(cursor)
-
-            self._speed_slider.hide()
-
-            self._main = False
-
-    def _toggle_rule(self):
-        """toggle rule menu"""
-        if self._rule:
-            self._hide_rule()
-        else:
-            self._show_rule()
-
-    def _show_rule(self):
-        """show rule menu"""
-        if not self._rule:
-            self._rule = True
-            bg_group = pgl.graphics.OrderedGroup(1)
-            arrow_group = pgl.graphics.OrderedGroup(2)
-
-            x, w, h = self._rule_x, self._rule_width, self._height
-
-            self._rule_primitives = []
-
-            self._rule_primitives.append(self._batch.add(4, pgl.gl.GL_QUADS, bg_group,
-                                                         ("v2i", (x, 0, x, h, x + w, h, x + w, 0)),
-                                                         ("c4B", ([51, 51, 51, self._main_opacity] * 4))))
-            for button in self._rule_buttons:
-                button.show()
-            for rule in self._rules:
-                rule.show()
-
-    def _hide_rule(self):
-        """hide rule menu"""
-        if self._rule:
-            for item in self._rule_primitives:
-                item.delete()
-
-            self._rule_primitives = None
-
-            for button in self._rule_buttons:
-                button.hide()
-            for rule in self._rules:
-                rule.hide()
-
-            self._rule = False
-
-    def update_rule_opacity(self, opacity, absolute = False):
-        """set rule opacity"""
-
-    def add_rule_group(self):
-        pass
-
-    def remove_rule_group(self, index):
-        pass
-
-    def reset_rules(self):
-        pass
+            self._rule["direction"] = "left"
+            self._buttons[1].scale_x = 1
