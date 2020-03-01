@@ -36,6 +36,11 @@ def toggle_counter():
                                  batch=batch, group=pgl.graphics.OrderedGroup(1))
 
 
+def set_speed(val):
+    global speed
+    speed = val
+
+
 window = pgl.window.Window(1920, 1080)
 batch = pgl.graphics.Batch()
 
@@ -51,14 +56,17 @@ rules = []
 
 menu_functions = {"pause": toggle_pause,
                   "reset": reset,
-                  "toggle_counter": toggle_counter}
+                  "toggle_counter": toggle_counter,
+                  "set_speed": set_speed}
 
-menu = menu.init(window, batch, menu_functions, rules)
+main_menu, rule_menu = menu.init(window, batch, menu_functions, rules)
 grid = Grid([5, 5], rules, batch, window, scale=25)
 ant = Ant(2, 2, grid)
 
+speed = 2
+
 prev_highlight = None
-paused = True
+paused = False
 dragged = False
 counter = None
 mouse_menu = False
@@ -68,7 +76,8 @@ drag_x = drag_y = 0
 @window.event
 def on_key_press(symbol, mod):
     if symbol == key.SPACE:
-        menu.toggle()
+        main_menu.toggle()
+        rule_menu.hide()
 
 
 @window.event
@@ -84,7 +93,7 @@ def on_mouse_motion(x, y, dx, dy):
     if tile is not None:
         tile.highlight()
 
-    mouse_menu = menu.mouse_over(x, y)
+    mouse_menu = any([main_menu.mouse_over(x, y), rule_menu.mouse_over(x, y)])
 
 
 @window.event
@@ -93,7 +102,7 @@ def on_mouse_drag(x, y, dx, dy, button, mods):
 
     if button == mouse.LEFT:
         if mouse_menu:
-            # menu.drag(dx, dy)
+            main_menu.mouse_drag(dx, dy)
             pass
         else:
             drag_x += dx
@@ -107,7 +116,8 @@ def on_mouse_release(x, y, button, mods):
 
     if button == mouse.LEFT:
         if not dragged:
-            menu.click()
+            main_menu.click(x, y)
+            rule_menu.click(x, y)
 
         dragged = False
 
@@ -124,10 +134,11 @@ def on_draw():
 
 
 def update(dt):
-    global drag_x, drag_y, paused, counter
+    global drag_x, drag_y, paused, counter, speed
 
     if not paused:
-        ant.update()
+        for _ in range(int(speed)):
+            ant.update()
 
     if counter is not None:
         counter.text = f"Step: {ant.get_steps()}"
@@ -137,5 +148,6 @@ def update(dt):
 
 
 if __name__ == '__main__':
-    pgl.clock.schedule_interval(update, 1 / 120)
+    pgl.clock.schedule_interval(update, 1 / 60)
     pgl.app.run()
+

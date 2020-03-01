@@ -46,7 +46,13 @@ class Button(pgl.sprite.Sprite):
         self.visible = False
         if self.group is None: self.group = pgl.graphics.OrderedGroup(2)
 
-    def click(self):
+    def click(self, x, y):
+        try:
+            self.mouse_over(x, y)
+        except AttributeError:
+            # if button has been deleted, sometimes this occurs
+            return
+
         if self.clickable and self.visible and self.moused_over:
             for command in self._commands: command()
 
@@ -56,7 +62,7 @@ class Button(pgl.sprite.Sprite):
 
     def mouse_over(self, x, y):
         """return true if x, y is in sprite bounds, change mouse cursor to hand"""
-        if self.clickable:
+        if self.clickable and self.visible:
             min_x = self.x - self.width / 2
             max_x = self.x + self.width / 2
             min_y = self.y - self.height / 2
@@ -69,3 +75,41 @@ class Button(pgl.sprite.Sprite):
             elif (not min_x < x < max_x or not min_y < y < max_y) and self.moused_over:
                 set_cursor("default")
                 self.moused_over = False
+
+
+class Slider(Button):
+    def __init__(self, dims, vals, commands, scale):
+        super().__init__(["slider.png"], [], scale, **{"x": dims[0], "y": dims[1]})
+        self._cx, self._cy, self._length, self._orientation = dims
+        self._min_val, self._max_val, self._value = vals
+        self._commands = commands
+
+        cx, cy, length, orientation = dims
+        min_val, max_val, default_val = vals
+
+        if self._orientation == "vertical":
+            self.y = cy - (length / 2) + default_val / (max_val - min_val) * length
+        elif self._orientation == "horizontal":
+            self.x = cx - (length / 2) + default_val / (max_val - min_val) * length
+            self.rotate(90)
+        else:
+            raise ValueError(f"Invalid orientation \"{orientation}\"")
+
+    def drag(self, dx, dy):
+        if self.moused_over:
+            if self._orientation == "vertical": drag = dy
+            else: drag = dx
+
+            self._value += drag / self._length * (self._max_val - self._min_val)
+
+            if self._value < self._min_val: self._value = self._min_val
+            if self._value > self._max_val: self._value = self._max_val
+
+            pos = self._value / (self._max_val - self._min_val) * self._length
+
+            if self._orientation == "vertical":
+                self.y = self._cy - (self._length / 2) + pos - self.height / 2
+            else:
+                self.x = self._cx - (self._length / 2) + pos - self.width / 2
+
+            for command in self._commands: command(self._value)
